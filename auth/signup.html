@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up | FlowSense</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1>FlowSense</h1>
+            <p>Join the future of team optimization.</p>
+        </div>
+
+        <div class="role-toggle">
+            <button class="role-btn active" id="btn-company" onclick="setRole('company')">Company</button>
+            <button class="role-btn" id="btn-employee" onclick="setRole('employee')">Employee</button>
+        </div>
+
+        <div class="role-toggle">
+            <button class="role-btn active" id="btn-company" onclick="setRole('company')">Company</button>
+            <button class="role-btn" id="btn-employee" onclick="setRole('employee')">Employee</button>
+        </div>
+
+        <form id="signup-form">
+            <div class="form-group">
+                <label for="name" id="name-label">Company Name</label>
+                <div class="input-wrapper">
+                    <input type="text" id="name" placeholder="Enter name" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <div class="input-wrapper">
+                    <input type="email" id="email" placeholder="admin@domain.com" required>
+                </div>
+            </div>
+
+            <!-- Employee Specific Fields -->
+            <div id="employee-fields" style="display: none;">
+                <div class="form-group">
+                    <label for="company-code">Company Code</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="company-code" placeholder="e.g., FS-2026">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="role">Industry Role</label>
+                    <div class="input-wrapper">
+                        <select id="role" style="width: 100%; padding: 12px; border: 1px solid var(--gray-100); background: var(--gray-50); border-radius: var(--radius-md);">
+                            <option value="Developer">Developer</option>
+                            <option value="Tester">Tester</option>
+                            <option value="Production">Production</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="skills">Skills (Comma separated)</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="skills" placeholder="Frontend, Backend, UI/UX">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Company Specific Field -->
+            <div class="form-group" id="phone-group">
+                <label for="phone">Phone Number</label>
+                <div class="input-wrapper">
+                    <input type="tel" id="phone" placeholder="+1 (555) 000-0000">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="confirmPassword" placeholder="••••••••" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="submit-btn" style="margin-top: 10px;">Create Account</button>
+        </form>
+
+        <div id="result-display" style="display: none; margin-top: 24px; text-align: center; padding: 20px; background: var(--primary-light-purple); border-radius: var(--radius-md); border: 2px dashed var(--primary-violet);">
+            <p id="result-message" style="font-size: 14px; color: var(--gray-600); margin-bottom: 8px;"></p>
+            <h2 id="generated-id" style="color: var(--primary-violet); letter-spacing: 2px;"></h2>
+            <p id="result-hint" style="font-size: 12px; color: var(--gray-600); margin-top: 8px;"></p>
+            <button onclick="window.location.href='login.html'" class="btn btn-primary" style="margin-top: 16px;">Go to Login</button>
+        </div>
+
+        <div class="auth-footer" id="auth-footer">
+            <p>Already have an account? <a href="login.html">Login</a></p>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api/auth';
+        let currentRole = 'company';
+
+        function setRole(role) {
+            currentRole = role;
+            document.getElementById('btn-company').classList.toggle('active', role === 'company');
+            document.getElementById('btn-employee').classList.toggle('active', role === 'employee');
+
+            const empFields = document.getElementById('employee-fields');
+            const phoneGroup = document.getElementById('phone-group');
+            const nameLabel = document.getElementById('name-label');
+            const submitBtn = document.getElementById('submit-btn');
+
+            if (role === 'employee') {
+                empFields.style.display = 'block';
+                phoneGroup.style.display = 'none';
+                nameLabel.innerText = 'Full Name';
+                submitBtn.innerText = 'Join Organization';
+                document.getElementById('company-code').required = true;
+                document.getElementById('phone').required = false;
+            } else {
+                empFields.style.display = 'none';
+                phoneGroup.style.display = 'block';
+                nameLabel.innerText = 'Company Name';
+                submitBtn.innerText = 'Create Company Account';
+                document.getElementById('company-code').required = false;
+                document.getElementById('phone').required = true;
+            }
+        }
+
+        // Initialize state
+        setRole('company');
+
+        document.getElementById('signup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submit-btn');
+            const originalBtnText = submitBtn.innerText;
+            submitBtn.innerText = 'Processing...';
+            submitBtn.disabled = true;
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Role specific data
+            const payload = { name, email, password, confirmPassword };
+            let endpoint = '/signup';
+
+            if (currentRole === 'employee') {
+                payload.company_code = document.getElementById('company-code').value;
+                payload.role = document.getElementById('role').value;
+                payload.skills = document.getElementById('skills').value;
+                endpoint = '/employee/signup';
+            } else {
+                payload.company_name = name; // Map name to company_name
+                payload.phone = document.getElementById('phone').value;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('signup-form').style.display = 'none';
+                    document.getElementById('auth-footer').style.display = 'none';
+                    document.getElementById('result-display').style.display = 'block';
+                    
+                    if (currentRole === 'company') {
+                        document.getElementById('result-message').innerText = 'Company Registration Successful!';
+                        document.getElementById('generated-id').innerText = data.data.company_code;
+                        document.getElementById('result-hint').innerText = 'Share this code with your employees.';
+                    } else {
+                        document.getElementById('result-message').innerText = 'Employee Account Created!';
+                        document.getElementById('generated-id').innerText = data.data.employee_id;
+                        document.getElementById('result-hint').innerText = `You have successfully joined ${data.data.company}.`;
+                    }
+                } else {
+                    alert('Error: ' + data.message);
+                    submitBtn.innerText = originalBtnText;
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                alert('Connection Error: Is the backend server running?');
+                console.error(error);
+                submitBtn.innerText = originalBtnText;
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

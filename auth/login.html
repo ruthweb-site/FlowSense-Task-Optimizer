@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | FlowSense</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1>FlowSense</h1>
+            <p>Welcome back! Please login to your account.</p>
+        </div>
+
+        <div class="role-toggle">
+            <button class="role-btn active" id="btn-company" onclick="setRole('company')">Company</button>
+            <button class="role-btn" id="btn-employee" onclick="setRole('employee')">Employee</button>
+        </div>
+
+        <form id="login-form">
+            <div class="form-group">
+                <label for="email" id="email-label">Company Email</label>
+                <div class="input-wrapper">
+                    <input type="email" id="email" placeholder="admin@company.com" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="login-btn">Sign In to Dashboard</button>
+        </form>
+
+        <div class="auth-footer">
+            <p>New here? <a href="signup.html">Create Account</a></p>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api/auth';
+        let currentRole = 'company';
+
+        function setRole(role) {
+            currentRole = role;
+            document.getElementById('btn-company').classList.toggle('active', role === 'company');
+            document.getElementById('btn-employee').classList.toggle('active', role === 'employee');
+
+            const emailLabel = document.getElementById('email-label');
+            const emailInput = document.getElementById('email');
+
+            if (role === 'employee') {
+                emailLabel.innerText = 'Employee Email';
+                emailInput.placeholder = 'name@domain.com';
+            } else {
+                emailLabel.innerText = 'Company Email';
+                emailInput.placeholder = 'admin@company.com';
+            }
+        }
+
+        // Initialize
+        setRole('company');
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loginBtn = document.getElementById('login-btn');
+            const originalBtnText = loginBtn.innerText;
+            loginBtn.innerText = 'Verifying...';
+            loginBtn.disabled = true;
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const endpoint = currentRole === 'employee' ? '/employee/login' : '/login';
+
+            try {
+                const response = await fetch(`${API_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Store token and redirect
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userRole', data.data.role);
+                    localStorage.setItem('userName', currentRole === 'employee' ? data.data.name : data.data.company_name);
+                    
+                    alert('Login Successful! Welcome, ' + (currentRole === 'employee' ? data.data.name : data.data.company_name));
+                    
+                    // Redirect logic
+                    if (data.data.role === 'employee') {
+                        // window.location.href = '../employee-dashboard.html';
+                        window.location.href = '../index.html'; 
+                    } else {
+                        // window.location.href = '../company-dashboard.html';
+                        window.location.href = '../index.html'; 
+                    }
+                } else {
+                    alert('Login Failed: ' + data.message);
+                    loginBtn.innerText = originalBtnText;
+                    loginBtn.disabled = false;
+                }
+            } catch (error) {
+                alert('Connection Error: Is the backend server running?');
+                console.error(error);
+                loginBtn.innerText = originalBtnText;
+                loginBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
