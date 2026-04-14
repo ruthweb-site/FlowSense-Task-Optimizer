@@ -4,9 +4,157 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up | FlowSense</title>
+    <meta name="description" content="Create your FlowSense account — intelligent team optimization starts here.">
     <link rel="stylesheet" href="../css/style.css">
+    <style>
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--white);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            transform: translateX(120%);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-width: 380px;
+            backdrop-filter: blur(12px);
+        }
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .toast.toast-error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        .toast.toast-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .toast.toast-info {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        }
+        .toast-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .toast-close {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 0 0 8px;
+            transition: color 0.2s;
+        }
+        .toast-close:hover {
+            color: var(--white);
+        }
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.4);
+            border-radius: 0 0 var(--radius-md) var(--radius-md);
+            animation: toastProgress 4s linear forwards;
+        }
+        @keyframes toastProgress {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+
+        /* Industry Select Styling */
+        .styled-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--gray-100);
+            background: var(--gray-50);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            outline: none;
+            color: var(--gray-900);
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234b5563' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            cursor: pointer;
+        }
+        .styled-select:focus {
+            border-color: var(--primary-blue);
+            background-color: var(--white);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Password strength indicator */
+        .password-strength {
+            height: 3px;
+            border-radius: 2px;
+            margin-top: 8px;
+            transition: all 0.3s ease;
+            background: var(--gray-100);
+        }
+        .password-strength .bar {
+            height: 100%;
+            border-radius: 2px;
+            transition: all 0.4s ease;
+            width: 0%;
+        }
+        .strength-weak .bar { width: 33%; background: #ef4444; }
+        .strength-medium .bar { width: 66%; background: #f59e0b; }
+        .strength-strong .bar { width: 100%; background: #10b981; }
+
+        /* Loading Spinner */
+        .btn-loading {
+            position: relative;
+            pointer-events: none;
+        }
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        @keyframes spin {
+            to { transform: translateY(-50%) rotate(360deg); }
+        }
+
+        /* Smooth field transitions */
+        .field-animate {
+            animation: fieldSlide 0.35s ease-out;
+        }
+        @keyframes fieldSlide {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
 <body>
+    <div class="toast-container" id="toast-container"></div>
+
     <div class="auth-card">
         <div class="auth-header">
             <h1>FlowSense</h1>
@@ -18,16 +166,11 @@
             <button class="role-btn" id="btn-employee" onclick="setRole('employee')">Employee</button>
         </div>
 
-        <div class="role-toggle">
-            <button class="role-btn active" id="btn-company" onclick="setRole('company')">Company</button>
-            <button class="role-btn" id="btn-employee" onclick="setRole('employee')">Employee</button>
-        </div>
-
-        <form id="signup-form">
-            <div class="form-group">
+        <form id="signup-form" novalidate>
+            <div class="form-group field-animate">
                 <label for="name" id="name-label">Company Name</label>
                 <div class="input-wrapper">
-                    <input type="text" id="name" placeholder="Enter name" required>
+                    <input type="text" id="name" placeholder="Enter company name" required>
                 </div>
             </div>
 
@@ -38,62 +181,74 @@
                 </div>
             </div>
 
+            <!-- Company Specific Field: Industry -->
+            <div class="form-group" id="industry-group">
+                <label for="industry">Industry</label>
+                <div class="input-wrapper">
+                    <select id="industry" class="styled-select">
+                        <option value="Technology">Technology</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Healthcare">Healthcare</option>
+                        <option value="Education">Education</option>
+                        <option value="Manufacturing">Manufacturing</option>
+                        <option value="Retail">Retail</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
             <!-- Employee Specific Fields -->
             <div id="employee-fields" style="display: none;">
-                <div class="form-group">
+                <div class="form-group field-animate">
                     <label for="company-code">Company Code</label>
                     <div class="input-wrapper">
-                        <input type="text" id="company-code" placeholder="e.g., FS-2026">
+                        <input type="text" id="company-code" placeholder="e.g., COMP2026" style="text-transform: uppercase; letter-spacing: 1px;">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="role">Industry Role</label>
+                <div class="form-group field-animate">
+                    <label for="role">Role</label>
                     <div class="input-wrapper">
-                        <select id="role" style="width: 100%; padding: 12px; border: 1px solid var(--gray-100); background: var(--gray-50); border-radius: var(--radius-md);">
+                        <select id="role" class="styled-select">
                             <option value="Developer">Developer</option>
                             <option value="Tester">Tester</option>
                             <option value="Production">Production</option>
                         </select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="skills">Skills (Comma separated)</label>
+                <div class="form-group field-animate">
+                    <label for="skills">Skills <span style="font-weight: 400; color: var(--gray-300);">(comma separated)</span></label>
                     <div class="input-wrapper">
                         <input type="text" id="skills" placeholder="Frontend, Backend, UI/UX">
                     </div>
                 </div>
             </div>
 
-            <!-- Company Specific Field -->
-            <div class="form-group" id="phone-group">
-                <label for="phone">Phone Number</label>
-                <div class="input-wrapper">
-                    <input type="tel" id="phone" placeholder="+1 (555) 000-0000">
-                </div>
-            </div>
-
             <div class="form-group">
                 <label for="password">Password</label>
                 <div class="input-wrapper">
-                    <input type="password" id="password" placeholder="••••••••" required>
+                    <input type="password" id="password" placeholder="Minimum 6 characters" required>
+                </div>
+                <div class="password-strength" id="password-strength">
+                    <div class="bar"></div>
                 </div>
             </div>
 
             <div class="form-group">
                 <label for="confirmPassword">Confirm Password</label>
                 <div class="input-wrapper">
-                    <input type="password" id="confirmPassword" placeholder="••••••••" required>
+                    <input type="password" id="confirmPassword" placeholder="Re-enter password" required>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary" id="submit-btn" style="margin-top: 10px;">Create Account</button>
+            <button type="submit" class="btn btn-primary" id="submit-btn" style="margin-top: 10px;">Create Company Account</button>
         </form>
 
-        <div id="result-display" style="display: none; margin-top: 24px; text-align: center; padding: 20px; background: var(--primary-light-purple); border-radius: var(--radius-md); border: 2px dashed var(--primary-violet);">
-            <p id="result-message" style="font-size: 14px; color: var(--gray-600); margin-bottom: 8px;"></p>
-            <h2 id="generated-id" style="color: var(--primary-violet); letter-spacing: 2px;"></h2>
-            <p id="result-hint" style="font-size: 12px; color: var(--gray-600); margin-top: 8px;"></p>
-            <button onclick="window.location.href='login.html'" class="btn btn-primary" style="margin-top: 16px;">Go to Login</button>
+        <div id="result-display" style="display: none; margin-top: 24px; text-align: center; padding: 28px; background: var(--primary-light-purple); border-radius: var(--radius-md); border: 2px dashed var(--primary-violet); animation: fadeIn 0.4s ease;">
+            <div style="font-size: 36px; margin-bottom: 12px;" id="result-icon">🎉</div>
+            <p id="result-message" style="font-size: 15px; color: var(--gray-600); margin-bottom: 8px; font-weight: 500;"></p>
+            <h2 id="generated-id" style="color: var(--primary-violet); letter-spacing: 3px; font-size: 24px; margin: 12px 0;"></h2>
+            <p id="result-hint" style="font-size: 13px; color: var(--gray-600); margin-top: 8px;"></p>
+            <button onclick="window.location.href='login.html'" class="btn btn-primary" style="margin-top: 20px;">Continue to Login →</button>
         </div>
 
         <div class="auth-footer" id="auth-footer">
@@ -105,61 +260,144 @@
         const API_URL = 'http://localhost:5000/api/auth';
         let currentRole = 'company';
 
+        // ── Toast Notification System ──
+        function showToast(message, type = 'error', duration = 4000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            const icons = { error: '✕', success: '✓', info: 'ℹ' };
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || '●'}</span>
+                <span>${message}</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+                <div class="toast-progress"></div>
+            `;
+
+            container.appendChild(toast);
+
+            // Trigger animation
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            // Auto-dismiss
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, duration);
+        }
+
+        // ── Password Strength Meter ──
+        document.getElementById('password').addEventListener('input', function() {
+            const strength = document.getElementById('password-strength');
+            const val = this.value;
+            strength.className = 'password-strength';
+
+            if (val.length === 0) return;
+            if (val.length < 6) {
+                strength.classList.add('strength-weak');
+            } else if (val.length < 10 || !/[A-Z]/.test(val) || !/[0-9]/.test(val)) {
+                strength.classList.add('strength-medium');
+            } else {
+                strength.classList.add('strength-strong');
+            }
+        });
+
+        // ── Role Toggle ──
         function setRole(role) {
             currentRole = role;
             document.getElementById('btn-company').classList.toggle('active', role === 'company');
             document.getElementById('btn-employee').classList.toggle('active', role === 'employee');
 
             const empFields = document.getElementById('employee-fields');
-            const phoneGroup = document.getElementById('phone-group');
+            const industryGroup = document.getElementById('industry-group');
             const nameLabel = document.getElementById('name-label');
+            const nameInput = document.getElementById('name');
             const submitBtn = document.getElementById('submit-btn');
 
             if (role === 'employee') {
                 empFields.style.display = 'block';
-                phoneGroup.style.display = 'none';
+                industryGroup.style.display = 'none';
                 nameLabel.innerText = 'Full Name';
+                nameInput.placeholder = 'Enter your full name';
                 submitBtn.innerText = 'Join Organization';
                 document.getElementById('company-code').required = true;
-                document.getElementById('phone').required = false;
             } else {
                 empFields.style.display = 'none';
-                phoneGroup.style.display = 'block';
+                industryGroup.style.display = 'block';
                 nameLabel.innerText = 'Company Name';
+                nameInput.placeholder = 'Enter company name';
                 submitBtn.innerText = 'Create Company Account';
                 document.getElementById('company-code').required = false;
-                document.getElementById('phone').required = true;
             }
         }
 
         // Initialize state
         setRole('company');
 
+        // ── Form Submission ──
         document.getElementById('signup-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const submitBtn = document.getElementById('submit-btn');
             const originalBtnText = submitBtn.innerText;
-            submitBtn.innerText = 'Processing...';
-            submitBtn.disabled = true;
 
-            const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
 
-            // Role specific data
+            // Client-side validation
+            if (!name || !email || !password || !confirmPassword) {
+                showToast('Please fill in all required fields.', 'error');
+                return;
+            }
+
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showToast('Please enter a valid email address.', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showToast('Password must be at least 6 characters.', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showToast('Passwords do not match. Please try again.', 'error');
+                return;
+            }
+
+            // Show loading state
+            submitBtn.innerText = 'Processing...';
+            submitBtn.disabled = true;
+            submitBtn.classList.add('btn-loading');
+
+            // Build payload
             const payload = { name, email, password, confirmPassword };
             let endpoint = '/signup';
 
             if (currentRole === 'employee') {
-                payload.company_code = document.getElementById('company-code').value;
-                payload.role = document.getElementById('role').value;
-                payload.skills = document.getElementById('skills').value;
+                const companyCode = document.getElementById('company-code').value.trim();
+                const role = document.getElementById('role').value;
+                const skills = document.getElementById('skills').value.trim();
+
+                if (!companyCode || !role || !skills) {
+                    showToast('Please fill in all employee fields.', 'error');
+                    submitBtn.innerText = originalBtnText;
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('btn-loading');
+                    return;
+                }
+
+                payload.company_code = companyCode;
+                payload.role = role;
+                payload.skills = skills;
                 endpoint = '/employee/signup';
             } else {
-                payload.company_name = name; // Map name to company_name
-                payload.phone = document.getElementById('phone').value;
+                payload.company_name = name;
+                payload.industry = document.getElementById('industry').value;
             }
 
             try {
@@ -172,29 +410,35 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    showToast(data.message || 'Account created successfully!', 'success');
+
                     document.getElementById('signup-form').style.display = 'none';
                     document.getElementById('auth-footer').style.display = 'none';
                     document.getElementById('result-display').style.display = 'block';
                     
                     if (currentRole === 'company') {
+                        document.getElementById('result-icon').innerText = '🏢';
                         document.getElementById('result-message').innerText = 'Company Registration Successful!';
                         document.getElementById('generated-id').innerText = data.data.company_code;
-                        document.getElementById('result-hint').innerText = 'Share this code with your employees.';
+                        document.getElementById('result-hint').innerText = 'Share this Company Code with your employees so they can join.';
                     } else {
+                        document.getElementById('result-icon').innerText = '🎉';
                         document.getElementById('result-message').innerText = 'Employee Account Created!';
                         document.getElementById('generated-id').innerText = data.data.employee_id;
                         document.getElementById('result-hint').innerText = `You have successfully joined ${data.data.company}.`;
                     }
                 } else {
-                    alert('Error: ' + data.message);
+                    showToast(data.message || 'Registration failed. Please try again.', 'error');
                     submitBtn.innerText = originalBtnText;
                     submitBtn.disabled = false;
+                    submitBtn.classList.remove('btn-loading');
                 }
             } catch (error) {
-                alert('Connection Error: Is the backend server running?');
-                console.error(error);
+                console.error('Signup Error:', error);
+                showToast('Unable to reach the server. Please ensure the backend is running on port 5000.', 'error');
                 submitBtn.innerText = originalBtnText;
                 submitBtn.disabled = false;
+                submitBtn.classList.remove('btn-loading');
             }
         });
     </script>

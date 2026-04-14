@@ -22,9 +22,10 @@ const CompanySchema = new mongoose.Schema({
         minlength: 6,
         select: false
     },
-    phone: {
+    industry: {
         type: String,
-        required: [true, 'Please add a phone number']
+        enum: ['Technology', 'Finance', 'Healthcare', 'Education', 'Manufacturing', 'Retail', 'Other'],
+        default: 'Technology'
     },
     company_code: {
         type: String,

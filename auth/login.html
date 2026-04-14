@@ -4,13 +4,104 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | FlowSense</title>
+    <meta name="description" content="Sign in to your FlowSense dashboard — manage your team's workload intelligently.">
     <link rel="stylesheet" href="../css/style.css">
+    <style>
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--white);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            transform: translateX(120%);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-width: 380px;
+            backdrop-filter: blur(12px);
+        }
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .toast.toast-error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        .toast.toast-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .toast.toast-info {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        }
+        .toast-icon { font-size: 18px; flex-shrink: 0; }
+        .toast-close {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 0 0 8px;
+            transition: color 0.2s;
+        }
+        .toast-close:hover { color: var(--white); }
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.4);
+            border-radius: 0 0 var(--radius-md) var(--radius-md);
+            animation: toastProgress 4s linear forwards;
+        }
+        @keyframes toastProgress {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+
+        /* Loading Spinner */
+        .btn-loading {
+            position: relative;
+            pointer-events: none;
+        }
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        @keyframes spin {
+            to { transform: translateY(-50%) rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
+    <div class="toast-container" id="toast-container"></div>
+
     <div class="auth-card">
         <div class="auth-header">
             <h1>FlowSense</h1>
-            <p>Welcome back! Please login to your account.</p>
+            <p>Welcome back! Sign in to your dashboard.</p>
         </div>
 
         <div class="role-toggle">
@@ -18,7 +109,7 @@
             <button class="role-btn" id="btn-employee" onclick="setRole('employee')">Employee</button>
         </div>
 
-        <form id="login-form">
+        <form id="login-form" novalidate>
             <div class="form-group">
                 <label for="email" id="email-label">Company Email</label>
                 <div class="input-wrapper">
@@ -45,6 +136,30 @@
         const API_URL = 'http://localhost:5000/api/auth';
         let currentRole = 'company';
 
+        // ── Toast Notification System ──
+        function showToast(message, type = 'error', duration = 4000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            const icons = { error: '✕', success: '✓', info: 'ℹ' };
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || '●'}</span>
+                <span>${message}</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+                <div class="toast-progress"></div>
+            `;
+
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.add('show'));
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, duration);
+        }
+
+        // ── Role Toggle ──
         function setRole(role) {
             currentRole = role;
             document.getElementById('btn-company').classList.toggle('active', role === 'company');
@@ -65,16 +180,25 @@
         // Initialize
         setRole('company');
 
+        // ── Login Form Submit ──
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const loginBtn = document.getElementById('login-btn');
             const originalBtnText = loginBtn.innerText;
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showToast('Please enter both email and password.', 'error');
+                return;
+            }
+
+            // Loading state
             loginBtn.innerText = 'Verifying...';
             loginBtn.disabled = true;
-
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+            loginBtn.classList.add('btn-loading');
 
             const endpoint = currentRole === 'employee' ? '/employee/login' : '/login';
 
@@ -88,31 +212,34 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // Store token and redirect
+                    // Store token and user data
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('userRole', data.data.role);
                     localStorage.setItem('userName', currentRole === 'employee' ? data.data.name : data.data.company_name);
                     
-                    alert('Login Successful! Welcome, ' + (currentRole === 'employee' ? data.data.name : data.data.company_name));
+                    const displayName = currentRole === 'employee' ? data.data.name : data.data.company_name;
+                    showToast(`Welcome back, ${displayName}! Redirecting...`, 'success', 2000);
                     
-                    // Redirect logic
-                    if (data.data.role === 'employee') {
-                        // window.location.href = '../employee-dashboard.html';
-                        window.location.href = '../index.html'; 
-                    } else {
-                        // window.location.href = '../company-dashboard.html';
-                        window.location.href = '../index.html'; 
-                    }
+                    // Redirect after short delay
+                    setTimeout(() => {
+                        if (data.data.role === 'employee') {
+                            window.location.href = '../index.html'; 
+                        } else {
+                            window.location.href = '../index.html'; 
+                        }
+                    }, 1500);
                 } else {
-                    alert('Login Failed: ' + data.message);
+                    showToast(data.message || 'Login failed. Please check your credentials.', 'error');
                     loginBtn.innerText = originalBtnText;
                     loginBtn.disabled = false;
+                    loginBtn.classList.remove('btn-loading');
                 }
             } catch (error) {
-                alert('Connection Error: Is the backend server running?');
-                console.error(error);
+                console.error('Login Error:', error);
+                showToast('Unable to reach the server. Please ensure the backend is running on port 5000.', 'error');
                 loginBtn.innerText = originalBtnText;
                 loginBtn.disabled = false;
+                loginBtn.classList.remove('btn-loading');
             }
         });
     </script>

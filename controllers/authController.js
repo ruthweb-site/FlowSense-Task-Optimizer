@@ -7,25 +7,25 @@ const jwt = require('jsonwebtoken');
 // @access  Public
 exports.signup = async (req, res) => {
     try {
-        const { company_name, email, password, confirmPassword, phone } = req.body;
+        const { company_name, email, password, confirmPassword, industry } = req.body;
 
         // Validation
-        if (!company_name || !email || !password || !confirmPassword || !phone) {
-            return res.status(400).json({ success: false, message: 'All fields are required' });
+        if (!company_name || !email || !password || !confirmPassword) {
+            return res.status(400).json({ success: false, message: 'Please fill in all required fields.' });
         }
 
         if (password !== confirmPassword) {
-            return res.status(400).json({ success: false, message: 'Passwords do not match' });
+            return res.status(400).json({ success: false, message: 'Passwords do not match.' });
         }
 
         if (password.length < 6) {
-            return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+            return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
         }
 
         // Check for existing company
         const companyExists = await Company.findOne({ email });
         if (companyExists) {
-            return res.status(400).json({ success: false, message: 'Email already exists' });
+            return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
         }
 
         // Create company
@@ -33,7 +33,7 @@ exports.signup = async (req, res) => {
             company_name,
             email,
             password,
-            phone
+            industry: industry || 'Technology'
         });
 
         if (company) {
@@ -44,12 +44,13 @@ exports.signup = async (req, res) => {
                     id: company._id,
                     company_name: company.company_name,
                     email: company.email,
-                    company_code: company.company_code
+                    company_code: company.company_code,
+                    industry: company.industry
                 }
             });
         }
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: 'Server error. Please try again later.' });
     }
 };
 
@@ -62,19 +63,19 @@ exports.login = async (req, res) => {
 
         // Validation
         if (!email || !password) {
-            return res.status(400).json({ success: false, message: 'Please provide email and password' });
+            return res.status(400).json({ success: false, message: 'Please provide email and password.' });
         }
 
         // Check for company
         const company = await Company.findOne({ email }).select('+password');
         if (!company) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password.' });
         }
 
         // Check password
         const isMatch = await company.matchPassword(password);
         if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password.' });
         }
 
         // Generate token
@@ -93,7 +94,7 @@ exports.login = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: 'Server error. Please try again later.' });
     }
 };
 
@@ -106,19 +107,19 @@ exports.employeeSignup = async (req, res) => {
 
         // Validation
         if (!name || !email || !password || !company_code || !role || !skills) {
-            return res.status(400).json({ success: false, message: 'All fields are required' });
+            return res.status(400).json({ success: false, message: 'Please fill in all required fields.' });
         }
 
         // Verify Company Code
         const company = await Company.findOne({ company_code });
         if (!company) {
-            return res.status(400).json({ success: false, message: 'Invalid Company Code. Registration failed.' });
+            return res.status(400).json({ success: false, message: 'Invalid Company Code. Please check with your organization admin.' });
         }
 
         // Check for existing employee
         const employeeExists = await Employee.findOne({ email });
         if (employeeExists) {
-            return res.status(400).json({ success: false, message: 'Employee with this email already exists' });
+            return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
         }
 
         // Process skills (convert string to array if needed)
@@ -145,7 +146,7 @@ exports.employeeSignup = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: 'Server error. Please try again later.' });
     }
 };
 
@@ -157,17 +158,17 @@ exports.employeeLogin = async (req, res) => {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ success: false, message: 'Please provide email and password' });
+            return res.status(400).json({ success: false, message: 'Please provide email and password.' });
         }
 
         const employee = await Employee.findOne({ email }).select('+password').populate('company_id', 'company_name');
         if (!employee) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password.' });
         }
 
         const isMatch = await employee.matchPassword(password);
         if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password.' });
         }
 
         const token = jwt.sign({ id: employee._id, role: 'employee' }, process.env.JWT_SECRET, {
@@ -186,6 +187,6 @@ exports.employeeLogin = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: 'Server error. Please try again later.' });
     }
 };
